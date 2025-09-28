@@ -1,3 +1,5 @@
+<pre>
+
 GEMM Optimization Method 1: Block-Tiling 
 
 The N×N input matrices are partitioned into TS×TS tiles.
@@ -110,8 +112,6 @@ Thread's Private Registers (regs[MR][NR])
 +-------+-------+
 
 
-
-
-
+</pre>
 
 
