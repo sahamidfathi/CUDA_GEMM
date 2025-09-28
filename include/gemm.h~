@@ -1,0 +1,22 @@
+#ifndef GEMM_H_INCLUDED
+#define GEMM_H_INCLUDED
+
+#include <cstddef>
+
+// C API wrappers around CUDA kernels / launchers so main.cpp (C++) can call them easily.
+extern "C" {
+
+// Launch the shared-memory tiled kernel and return average ms per iteration.
+// dA, dB, dC are device pointers (float*), N is matrix size, iter is number of timed iterations.
+double launch_gemm_tiled(const float* dA, const float* dB, float* dC, int N, int iter);
+
+// Launch the register-blocked micro-tile kernel and return average ms per iteration.
+double launch_gemm_reg(const float* dA, const float* dB, float* dC, int N, int iter);
+
+// Utility to query recommended shared-tile param (optional)
+int gemm_recommended_tiled_tile();
+
+} // extern "C"
+
+#endif // GEMM_H_INCLUDED
+
