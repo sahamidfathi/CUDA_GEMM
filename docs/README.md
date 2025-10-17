@@ -1,3 +1,5 @@
+<pre>
+
 GEMM Optimization Methods Used: tiling, register blocking, double buffering.
 
 ================================================================================
@@ -128,4 +130,4 @@ Two shared memory buffers are used (As_buf[0] and As_buf[1]). While the threads 
 
 
 
-
+<\pre>
