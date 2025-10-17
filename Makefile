@@ -3,10 +3,11 @@
 NVCC  ?= nvcc
 
 SM ?= sm_80 # architecture dependent
-SIMPLE_TS ?= 16
-REG_TS ?= 64
-MR ?= 8
-NR ?= 8
+BLOCK_SIZE ?= 16
+SIMPLE_TS ?= 16 # 16 
+REG_TS ?= 32 #64
+MR ?= 4 #8
+NR ?= 4 #8
 
 NVCCFLAGS ?= -O3 -lineinfo -Xptxas -v -arch=$(SM)
 
@@ -16,7 +17,7 @@ OBJDIR = obj
 BINDIR = bin
 
 SRCS_CPP = $(SRCDIR)/main.cpp $(SRCDIR)/utils.cpp
-SRCS_CU  = $(SRCDIR)/gemm_tiled.cu $(SRCDIR)/gemm_reg.cu
+SRCS_CU  = $(SRCDIR)/gemm_naive.cu $(SRCDIR)/gemm_tiled.cu $(SRCDIR)/gemm_reg.cu $(SRCDIR)/gemm_reg_prefetch.cu
 
 OBJS = $(patsubst $(SRCDIR)/%.cpp,$(OBJDIR)/%.o,$(SRCS_CPP)) \
        $(patsubst $(SRCDIR)/%.cu,$(OBJDIR)/%.o,$(SRCS_CU))
@@ -32,29 +33,31 @@ $(BINDIR):
 
 # compile macros
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp | $(OBJDIR)
-	$(NVCC) $(NVCCFLAGS) -I$(INCDIR) -DREG_TS=$(REG_TS) -DMR=$(MR) -DNR=$(NR) -DSIMPLE_TS=$(SIMPLE_TS) -c $< -o $@
+	$(NVCC) $(NVCCFLAGS) -I$(INCDIR) -DBLOCK_SIZE=$(BLOCK_SIZE) -DREG_TS=$(REG_TS) -DMR=$(MR) -DNR=$(NR) -DSIMPLE_TS=$(SIMPLE_TS) -c $< -o $@
 
 # compile
 $(OBJDIR)/%.o: $(SRCDIR)/%.cu | $(OBJDIR)
-	$(NVCC) $(NVCCFLAGS) -I$(INCDIR) -DREG_TS=$(REG_TS) -DMR=$(MR) -DNR=$(NR) -DSIMPLE_TS=$(SIMPLE_TS) -c $< -o $@
+	$(NVCC) $(NVCCFLAGS) -I$(INCDIR) -DBLOCK_SIZE=$(BLOCK_SIZE) -DREG_TS=$(REG_TS) -DMR=$(MR) -DNR=$(NR) -DSIMPLE_TS=$(SIMPLE_TS) -c $< -o $@
 
 # link
 $(BINDIR)/gemm: $(OBJS) | $(BINDIR)
 	$(NVCC) $(NVCCFLAGS) $(OBJS) -o $@
 
-.PHONY: run_simple
-run_simple: all
-	$(BINDIR)/gemm --mode simple --size 1024 --iters 10
+.PHONY: run_naive
+run_naive: all
+	$(BINDIR)/gemm --mode naive --size 1024 --iters 10
+
+.PHONY: run_shared
+run_shared: all
+	$(BINDIR)/gemm --mode shared --size 1024 --iters 10
 
 .PHONY: run_reg
 run_reg: all
 	$(BINDIR)/gemm --mode reg --size 1024 --iters 10
 
-.PHONY: debug
-debug:
-	@echo "NVCC = $(NVCC)"
-	@echo "NVCCFLAGS = $(NVCCFLAGS)"
-	@echo "SIMPLE_TS = $(SIMPLE_TS)  REG_TS = $(REG_TS) MR = $(MR) NR = $(NR)"
+.PHONY: run_reg_prefetch
+run_reg_prefetch: all
+	$(BINDIR)/gemm --mode regprefetch --size 1024 --iters 10
 
 .PHONY: clean
 clean:

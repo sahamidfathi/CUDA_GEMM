@@ -1,10 +1,13 @@
-GEMM Optimization Method 1: Block-Tiling 
+GEMM Optimization Methods Used: tiling, register blocking, double buffering.
 
+================================================================================
+GEMM Optimization Method 1: Block-Tiling 
+================================================================================
 The N×N input matrices are partitioned into TS×TS tiles.
 
 A threadblock is launched to compute a single TS×TS tile of the output matrix C. 
 
-For example, N=64, TS = 16. Multiply row A10..A13 by col B01..B31 to get C11.
+For example, N=64, TS = 16. Multiply row A10..A13 (k elems) by col B01..B31 to get C11.
 Matrix A (64x64)           Matrix B (64x64)           Matrix C (64x64)
 +---+---+---+---+          +---+---+---+---+          +---+---+---+---+
 |A00|A01|A02|A03|          |B00|B01|B02|B03|          |C00|C01|C02|C03|
@@ -28,8 +31,9 @@ Each thread accumulates the partial products across all K iterations until the f
 
 
 
-
+================================================================================
 GEMM Optimization Method 2: Block-Tiling with Register Blocking
+================================================================================
 This is an implementation of a highly optimized General Matrix Multiplication (GEMM) CUDA kernel, utilizing a multi-level tiling strategy.
 
 The goal is to keep the required data as close as possible to the execution units (CUDA Cores) by moving it through the GPU's memory hierarchy: Global Memory (slowest) → Shared Memory (fast) → Registers (fastest).
@@ -110,6 +114,16 @@ Thread's Private Registers (regs[MR][NR])
 +-------+-------+
 
 
+================================================================================
+GEMM Optimization Method 3: Block-Tiling with Register Blocking & Double Buffering
+================================================================================
+The matrix C is divided into TS×TS sub-blocks. Each sub-block is computed by a CUDA thread block.
+
+Data for the current tile of A and B needed by the thread block is staged from global memory into shared memory (As_buf and Bs_buf are the two double-buffered arrays for matrix A and B).
+
+Each individual thread computes a small MR×NR micro-tile of the C matrix. This data is stored in registers. The regs[_MR][_NR] array holds the thread's contribution.
+
+Two shared memory buffers are used (As_buf[0] and As_buf[1]). While the threads are computing using data from the current buffer (cur), other threads are simultaneously fetching the next tile of data into the other buffer (next). This hides memory latency.
 
 
 

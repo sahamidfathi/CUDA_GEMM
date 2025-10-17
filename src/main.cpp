@@ -17,14 +17,14 @@
 int main(int argc, char** argv) {
   int N = 1024;
   int iters = 10;
-  const char* mode = "simple";
+  const char* mode = "shared";
 
   for (int i = 1; i < argc; ++i) {
     if (strcmp(argv[i], "--size") == 0 && i + 1 < argc) N = atoi(argv[++i]);
     else if (strcmp(argv[i], "--iters") == 0 && i + 1 < argc) iters = atoi(argv[++i]);
     else if (strcmp(argv[i], "--mode") == 0 && i + 1 < argc) mode = argv[++i];
     else if (strcmp(argv[i], "--help") == 0) {
-      printf("Usage: %s [--size N] [--iters iters] [--mode simple|reg]\n", argv[0]);
+      printf("Usage: %s [--size N] [--iters iters] [--mode naive|shared|reg|regprefetch]\n", argv[0]);
       return 0;
     }
   }
@@ -48,10 +48,16 @@ int main(int argc, char** argv) {
   CUDA_CHECK(cudaMemset(dC, 0, bytes));
 
   double avg_ms = 0.0;
-  if (strcmp(mode, "simple") == 0) {
+  if (strcmp(mode, "naive") == 0) {
+    avg_ms = launch_gemm_naive(dA, dB, dC, N, iters);
+  } else if (strcmp(mode, "shared") == 0) {
     avg_ms = launch_gemm_tiled(dA, dB, dC, N, iters);
-  } else {
+  } else if (strcmp(mode, "reg") == 0) {
     avg_ms = launch_gemm_reg(dA, dB, dC, N, iters);
+  } else if (strcmp(mode, "regprefetch") == 0) {
+    avg_ms = launch_gemm_reg_async(dA, dB, dC, N, iters);
+  } else {
+    // other modes
   }
 
   CUDA_CHECK(cudaMemcpy(hC, dC, bytes, cudaMemcpyDeviceToHost));
@@ -70,7 +76,7 @@ int main(int argc, char** argv) {
     printf("Skipping CPU validation for N > 512.\n");
   }
 
-  double flops = 2.0 * (double)N * N * N;
+  double flops = 2.0 * (double)N * N * N; // one multiplication and almost one addition for N times for N*N elements of C
   double secs = 1e-3 * avg_ms;
   double gflops = flops / secs / 1e9;
   printf("Average kernel time: %.3f ms\n", avg_ms);
